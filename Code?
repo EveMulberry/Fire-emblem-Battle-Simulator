@@ -1,0 +1,190 @@
+const weapons = [
+  { id: 'iron_sword', type: 'Sword', mt: 5, wt: 5, hit: 90, crit: 0, dmgType: 'Phys' },
+  { id: 'steel_sword', type: 'Sword', mt: 8, wt: 10, hit: 75, crit: 0, dmgType: 'Phys' },
+  { id: 'silver_sword', type: 'Sword', mt: 13, wt: 8, hit: 85, crit: 0, dmgType: 'Phys' },
+  { id: 'killing_edge', type: 'Sword', mt: 9, wt: 7, hit: 75, crit: 30, dmgType: 'Phys' },
+  { id: 'rapier', type: 'Sword', mt: 7, wt: 5, hit: 95, crit: 10, dmgType: 'Phys' },
+  { id: 'sieglinde', type: 'Sword', mt: 16, wt: 9, hit: 90, crit: 0, dmgType: 'Phys' },
+
+  { id: 'iron_lance', type: 'Lance', mt: 7, wt: 8, hit: 80, crit: 0, dmgType: 'Phys' },
+  { id: 'steel_lance', type: 'Lance', mt: 10, wt: 13, hit: 70, crit: 0, dmgType: 'Phys' },
+  { id: 'silver_lance', type: 'Lance', mt: 14, wt: 10, hit: 75, crit: 0, dmgType: 'Phys' },
+  { id: 'killer_lance', type: 'Lance', mt: 10, wt: 9, hit: 70, crit: 30, dmgType: 'Phys' },
+  { id: 'javelin', type: 'Lance', mt: 6, wt: 11, hit: 65, crit: 0, dmgType: 'Phys' },
+  { id: 'vidofnir', type: 'Lance', mt: 15, wt: 11, hit: 80, crit: 0, dmgType: 'Phys' },
+
+  { id: 'iron_axe', type: 'Axe', mt: 8, wt: 10, hit: 75, crit: 0, dmgType: 'Phys' },
+  { id: 'steel_axe', type: 'Axe', mt: 11, wt: 15, hit: 65, crit: 0, dmgType: 'Phys' },
+  { id: 'silver_axe', type: 'Axe', mt: 15, wt: 12, hit: 70, crit: 0, dmgType: 'Phys' },
+  { id: 'killer_axe', type: 'Axe', mt: 11, wt: 11, hit: 65, crit: 30, dmgType: 'Phys' },
+  { id: 'hammer', type: 'Axe', mt: 10, wt: 15, hit: 55, crit: 0, dmgType: 'Phys' },
+  { id: 'garm', type: 'Axe', mt: 20, wt: 13, hit: 75, crit: 0, dmgType: 'Phys' },
+
+  { id: 'fire', type: 'Magic', mt: 5, wt: 4, hit: 90, crit: 0, dmgType: 'Mag' },
+  { id: 'elfire', type: 'Magic', mt: 10, wt: 10, hit: 85, crit: 0, dmgType: 'Mag' },
+  { id: 'thunder', type: 'Magic', mt: 8, wt: 6, hit: 80, crit: 5, dmgType: 'Mag' },
+  { id: 'lightning', type: 'Magic', mt: 4, wt: 5, hit: 95, crit: 0, dmgType: 'Mag' },
+  { id: 'flux', type: 'Magic', mt: 7, wt: 8, hit: 80, crit: 0, dmgType: 'Mag' }
+];
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const SUPPORT_VALUES = {
+  none: { mt: 0, hit: 0, crit: 0, avoid: 0 },
+  C:    { mt: 0, hit: 5, crit: 5, avoid: 5 },
+  B:    { mt: 0, hit: 10, crit: 10, avoid: 10 },
+  A:    { mt: 0, hit: 15, crit: 15, avoid: 15 }
+};
+
+const RANK_VALUES = {
+  E: { hit: 0, crit: 0 },
+  D: { hit: 0, crit: 0 },
+  C: { hit: 0, crit: 0 },
+  B: { hit: 2, crit: 0 },
+  A: { hit: 3, crit: 3 },
+  S: { hit: 5, crit: 5 }
+};
+
+const getTri = (t1, t2) => {
+  if (
+    (t1 === 'Sword' && t2 === 'Axe') ||
+    (t1 === 'Axe' && t2 === 'Lance') ||
+    (t1 === 'Lance' && t2 === 'Sword')
+  ) {
+    return { mt: 1, hit: 15 };
+  }
+
+  if (
+    (t1 === 'Axe' && t2 === 'Sword') ||
+    (t1 === 'Lance' && t2 === 'Axe') ||
+    (t1 === 'Sword' && t2 === 'Lance')
+  ) {
+    return { mt: -1, hit: -15 };
+  }
+
+  return { mt: 0, hit: 0 };
+};
+
+function getFC(a, b) {
+  const atkWeapon = a.wpn ?? a.weapon;
+  const defWeapon = b.wpn ?? b.weapon;
+
+  const supportAtk = SUPPORT_VALUES[a.support ?? 'none'] ?? SUPPORT_VALUES.none;
+  const supportDef = SUPPORT_VALUES[b.support ?? 'none'] ?? SUPPORT_VALUES.none;
+
+  const rankAtk = RANK_VALUES[a.rank ?? 'E'] ?? RANK_VALUES.E;
+  const tri = getTri(atkWeapon.type, defWeapon.type);
+
+  const baseMt = a.effective ? atkWeapon.mt * 3 : atkWeapon.mt;
+  const effectiveAtk = a.pow + baseMt + tri.mt + supportAtk.mt;
+
+  const defenseStat = (atkWeapon.dmgType === 'Mag' ? b.res : b.def) + (b.terrain === 'Fort' ? 2 : 0);
+
+  const atkSpeed = a.spd - Math.max(0, atkWeapon.wt - a.con);
+  const defSpeed = b.spd - Math.max(0, defWeapon.wt - b.con);
+
+  const rawHit =
+    atkWeapon.hit +
+    a.skl * 2 +
+    Math.floor(a.lck / 2) +
+    tri.hit +
+    supportAtk.hit +
+    rankAtk.hit;
+
+  const terrainAvoid =
+    (b.terrain === 'Forest' || b.terrain === 'Fort' ? 20 : 0) +
+    supportDef.avoid;
+
+  const avoid = defSpeed * 2 + b.lck + terrainAvoid;
+
+  const critChance =
+    atkWeapon.crit +
+    Math.floor(a.skl / 2) +
+    supportAtk.crit +
+    (a.critClass ? 15 : 0) +
+    rankAtk.crit -
+    b.lck -
+    supportDef.crit;
+
+  return {
+    as: atkSpeed,
+    dmg: Math.max(0, effectiveAtk - defenseStat),
+    hit: clamp(rawHit - avoid, 0, 100),
+    crit: clamp(critChance, 0, 100),
+    dbl: false
+  };
+}
+
+function runSim(u1, u2, mode = 'Classic', use2RN = true) {
+  const log = [];
+  let hp1 = u1.hp;
+  let hp2 = u2.hp;
+  let round = 1;
+
+  const f1 = getFC(u1, u2);
+  const f2 = getFC(u2, u1);
+
+  f1.dbl = (f1.as - f2.as >= 4);
+  f2.dbl = (f2.as - f1.as >= 4);
+
+  log.push(`[START] ${u1.name} (${hp1} HP) vs ${u2.name} (${hp2} HP}`);
+
+  const roll = (threshold) => {
+    let r = Math.random() * 100;
+    if (use2RN) r = (r + Math.random() * 100) / 2;
+    return r < threshold;
+  };
+
+  const strike = (attacker, combat, defender, defenderName, label = 'attacks') => {
+    if (defender.hp <= 0) return true;
+
+    log.push(`• ${attacker.name} ${label}...`);
+
+    if (roll(combat.hit)) {
+      const crit = roll(combat.crit);
+      const dmg = crit ? combat.dmg * 3 : combat.dmg;
+
+      defender.hp = Math.max(0, defender.hp - dmg);
+
+      log.push(
+        crit
+          ? `✨ CRITICAL! ${attacker.name} deals ${dmg} damage to ${defenderName}!`
+          : `💥 Hit! ${attacker.name} deals ${dmg} damage to ${defenderName}.`
+      );
+      log.push(` STATUS: ${defenderName} HP is now [${defender.hp}]`);
+    } else {
+      log.push(`💨 Miss! ${attacker.name} missed.`);
+    }
+
+    return defender.hp <= 0;
+  };
+
+  const o1 = { hp: hp1, name: u1.name };
+  const o2 = { hp: hp2, name: u2.name };
+
+  while (o1.hp > 0 && o2.hp > 0) {
+    log.push(`--- Round ${round} ---`);
+
+    if (strike(u1, f1, o2, u2.name)) break;
+    if (strike(u2, f2, o1, u1.name)) break;
+
+    if (f1.dbl && strike(u1, f1, o2, u2.name, 'doubles')) break;
+    if (f2.dbl && strike(u2, f2, o1, u1.name, 'doubles')) break;
+
+    if (mode === 'Classic') break;
+    round += 1;
+    if (round > 50) break;
+  }
+
+  if (o1.hp <= 0 && o2.hp <= 0) {
+    log.push(`🛡️ DRAW: both combatants fell in the same round.`);
+  } else if (o1.hp <= 0) {
+    log.push(`💀 VICTORY: ${u2.name} has won!`);
+  } else if (o2.hp <= 0) {
+    log.push(`🏆 VICTORY: ${u1.name} has won!`);
+  } else {
+    log.push(`🛡️ END: Match concluded with both surviving.`);
+  }
+
+  return log.join('\n');
+}
