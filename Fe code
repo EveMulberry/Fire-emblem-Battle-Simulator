@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FE GBA Combat Engine Simulator</title>
+  <style>
+    :root {
+      --bg-color: #0f141d;
+      --panel-bg: #1a2232;
+      --card-bg: #222d42;
+      --border-color: #3b4d6b;
+      --gold-accent: #e5be65;
+      --gold-light: #fef0be;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --red-accent: #ef4444;
+      --green-accent: #22c55e;
+      --blue-accent: #3b82f6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--gold-accent);
+      padding-bottom: 12px;
+    }
+
+    header h1 {
+      color: var(--gold-accent);
+      font-size: 1.8rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Global Controls */
+    .controls-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      color: var(--gold-light);
+      font-size: 0.9rem;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      background-color: #111827;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    select:focus, input:focus {
+      outline: 1px solid var(--gold-accent);
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Combatants Grid */
+    .combatants-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .combatants-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .unit-card {
+      background-color: var(--panel-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .unit-card.p1 { border-color: #3b82f6; }
+    .unit-card.p2 { border-color: #ef4444; }
+
+    .unit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .unit-header h2 {
+      font-size: 1.2rem;
+    }
+
+    .unit-card.p1 h2 { color: #60a5fa; }
+    .unit-card.p2 h2 { color: #f87171; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-field {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-field label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    .stat-field input {
+      width: 100%;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: var(--card-bg);
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    /* Forecast Display */
+    .forecast-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--gold-accent);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .forecast-card h3 {
+      color: var(--gold-accent);
+      font-size: 1rem;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .forecast-stats {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .forecast-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .forecast-metric {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      background: var(--card-bg);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .forecast-metric span.val {
+      font-weight: bold;
+      color: var(--gold-light);
+    }
+
+    .forecast-labels {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--text-muted);
+    }
+
+    .forecast-labels div {
+      padding: 4px 0;
+    }
+
+    /* Action Button */
+    .btn-sim {
+      background: linear-gradient(180deg, #e5be65 0%, #b88e2c 100%);
+      color: #0f141d;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: opacity 0.15s ease;
+    }
+
+    .btn-sim:hover {
+      opacity: 0.9;
+    }
+
+    /* Log Output */
+    .log-card {
+      background-color: #0b0f19;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    .log-card h3 {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      font-family: inherit;
+    }
+
+    #combatLog {
+      white-space: pre-wrap;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #d1d5db;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>FE Combat Simulator</h1>
+    <p>GBA Math Engine & Battle Log</p>
+  </header>
+
+  <div class="container">
+
+    <!-- Global Controls -->
+    <div class="controls-card">
+      <div class="control-group">
+        <label for="simMode">Combat Mode:</label>
+        <select id="simMode">
+          <option value="Classic">Classic (1 Round)</option>
+          <option value="Death">Until Death (Multi-Round)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="use2RN" checked>
+          Enable 2RN (True Hit)
+        </label>
+      </div>
+    </div>
+
+    <!-- Units Input Grid -->
+    <div class="combatants-grid">
+      
+      <!-- Unit 1 -->
+      <div class="unit-card p1">
+        <div class="unit-header">
+          <h2>Unit 1 (Attacker)</h2>
+        </div>
+        
+        <div class="stat-field">
+          <label>Name</label>
+          <input type="text" id="u1_name" value="Eirika">
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-field"><label>HP</label><input type="number" id="u1_hp" value="24"></div>
+          <div class="stat-field"><label>Pow</label><input type="number" id="u1_pow" value="8"></div>
+          <div class="stat-field"><label>Skl</label><input type="number" id="u1_skl" value="12"></div>
+          <div class="stat-field"><label>Spd</label><input type="number" id="u1_spd" value="13"></div>
+          <div class="stat-field"><label>Lck</label><input type="number" id="u1_lck" value="9"></div>
+          <div class="stat-field"><label>Def</label><input type="number" id="u1_def" value="6"></div>
+          <div class="stat-field"><label>Res</label><input type="number" id="u1_res" value="3"></div>
+          <div class="stat-field"><label>Con</label><input type="number" id="u1_con" value="6"></div>
+        </div>
+
+        <div class="stat-field">
+          <label>Weapon</label>
+          <select id="u1_weapon" class="wpn-select"></select>
+        </div>
+
+        <div class="options-grid">
+          <div class="stat-field">
+            <label>Support</label>
+            <select id="u1_support">
+              <option value="none">None</option>
+              <option value="C">C</option>
+              <option value="B">B</option>
+              <option value="A" selected>A</option>
+            </select>
+          </div>
+          <div class="stat-field">
+            <label>Wpn Rank</label>
+            <select id="u1_rank">
+              <option value="E">E</option>
+              <option value="D">D</option>
+              <option value="C">C</option>
+              <option value="B">B</option>
+              <option value="A">A</option>
+              <option value="S" selected>S</option>
+            </select>
+          </div>
+          <div class="stat-field">
+            <label>Terrain</label>
+            <select id="u1_terrain">
+              <option value="None">Plain (0)</option>
+              <option value="Forest">Forest (+20 Avo)</option>
+              <option value="Fort">Fort (+20 Avo, +2 Def)</option>
+            </select>
+          </div>
+          <div class="stat-field" style="justify-content: flex-end;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="u1_critClass">
+              +15% Crit Class
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="u1_effective">
+              Effective Wpn
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unit 2 -->
+      <div class="unit-card p2">
+        <div class="unit-header">
+          <h2>Unit 2 (Defender)</h2>
+        </div>
+        
+        <div class="stat-field">
+          <label>Name</label>
+          <input type="text" id="u2_name" value="Seth">
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-field"><label>HP</label><input type="number" id="u2_hp" value="30"></div>
+          <div class="stat-field"><label>Pow</label><input type="number" id="u2_pow" value="14"></div>
+          <div class="stat-field"><label>Skl</label><input type="number" id="u2_skl" value="13"></div>
+          <div class="stat-field"><label>Spd</label><input type="number" id="u2_spd" value="12"></div>
+          <div class="stat-field"><label>Lck</label><input type="number" id="u2_lck" value="13"></div>
+          <div class="stat-field"><label>Def</label><input type="number" id="u2_def" value="11"></div>
+          <div class="stat-field"><label>Res</label><input type="number" id="u2_res" value="8"></div>
+          <div class="stat-field"><label>Con</label><input type="number" id="u2_con" value="11"></div>
+        </div>
+
+        <div class="stat-field">
+          <label>Weapon</label>
+          <select id="u2_weapon" class="wpn-select"></select>
+        </div>
+
+        <div class="options-grid">
+          <div class="stat-field">
+            <label>Support</label>
+            <select id="u2_support">
+              <option value="none" selected>None</option>
+              <option value="C">C</option>
+              <option value="B">B</option>
+              <option value="A">A</option>
+            </select>
+          </div>
+          <div class="stat-field">
+            <label>Wpn Rank</label>
+            <select id="u2_rank">
+              <option value="E">E</option>
+              <option value="D">D</option>
+              <option value="C">C</option>
+              <option value="B">B</option>
+              <option value="A" selected>A</option>
+              <option value="S">S</option>
+            </select>
+          </div>
+          <div class="stat-field">
+            <label>Terrain</label>
+            <select id="u2_terrain">
+              <option value="None">Plain (0)</option>
+              <option value="Forest" selected>Forest (+20 Avo)</option>
+              <option value="Fort">Fort (+20 Avo, +2 Def)</option>
+            </select>
+          </div>
+          <div class="stat-field" style="justify-content: flex-end;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="u2_critClass">
+              +15% Crit Class
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="u2_effective">
+              Effective Wpn
+            </label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Live Battle Forecast -->
+    <div class="forecast-card">
+      <h3>Combat Forecast</h3>
+      <div class="forecast-stats">
+        
+        <div class="forecast-col">
+          <div class="forecast-metric"><span>DMG</span><span id="f1_dmg" class="val">0</span></div>
+          <div class="forecast-metric"><span>HIT</span><span id="f1_hit" class="val">0%</span></div>
+          <div class="forecast-metric"><span>CRIT</span><span id="f1_crit" class="val">0%</span></div>
+          <div class="forecast-metric"><span>AS</span><span id="f1_as" class="val">0</span></div>
+          <div class="forecast-metric"><span>DBL</span><span id="f1_dbl" class="val">No</span></div>
+        </div>
+
+        <div class="forecast-labels">
+          <div>DAMAGE</div>
+          <div>HIT %</div>
+          <div>CRIT %</div>
+          <div>ATK SPEED</div>
+          <div>DOUBLES</div>
+        </div>
+
+        <div class="forecast-col">
+          <div class="forecast-metric"><span>DMG</span><span id="f2_dmg" class="val">0</span></div>
+          <div class="forecast-metric"><span>HIT</span><span id="f2_hit" class="val">0%</span></div>
+          <div class="forecast-metric"><span>CRIT</span><span id="f2_crit" class="val">0%</span></div>
+          <div class="forecast-metric"><span>AS</span><span id="f2_as" class="val">0</span></div>
+          <div class="forecast-metric"><span>DBL</span><span id="f2_dbl" class="val">No</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <button id="runSimBtn" class="btn-sim">⚔️ Run Simulation</button>
+
+    <!-- Combat Log -->
+    <div class="log-card">
+      <h3>Battle Log</h3>
+      <div id="combatLog">Click "Run Simulation" to start battle...</div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- WEAPONS DATA ---
+    const weapons = [
+      { id: 'iron_sword', name: 'Iron Sword', type: 'Sword', mt: 5, wt: 5, hit: 90, crit: 0, dmgType: 'Phys' },
+      { id: 'steel_sword', name: 'Steel Sword', type: 'Sword', mt: 8, wt: 10, hit: 75, crit: 0, dmgType: 'Phys' },
+      { id: 'silver_sword', name: 'Silver Sword', type: 'Sword', mt: 13, wt: 8, hit: 85, crit: 0, dmgType: 'Phys' },
+      { id: 'killing_edge', name: 'Killing Edge', type: 'Sword', mt: 9, wt: 7, hit: 75, crit: 30, dmgType: 'Phys' },
+      { id: 'rapier', name: 'Rapier', type: 'Sword', mt: 7, wt: 5, hit: 95, crit: 10, dmgType: 'Phys' },
+      { id: 'sieglinde', name: 'Sieglinde', type: 'Sword', mt: 16, wt: 9, hit: 90, crit: 0, dmgType: 'Phys' },
+
+      { id: 'iron_lance', name: 'Iron Lance', type: 'Lance', mt: 7, wt: 8, hit: 80, crit: 0, dmgType: 'Phys' },
+      { id: 'steel_lance', name: 'Steel Lance', type: 'Lance', mt: 10, wt: 13, hit: 70, crit: 0, dmgType: 'Phys' },
+      { id: 'silver_lance', name: 'Silver Lance', type: 'Lance', mt: 14, wt: 10, hit: 75, crit: 0, dmgType: 'Phys' },
+      { id: 'killer_lance', name: 'Killer Lance', type: 'Lance', mt: 10, wt: 9, hit: 70, crit: 30, dmgType: 'Phys' },
+      { id: 'javelin', name: 'Javelin', type: 'Lance', mt: 6, wt: 11, hit: 65, crit: 0, dmgType: 'Phys' },
+      { id: 'vidofnir', name: 'Vidofnir', type: 'Lance', mt: 15, wt: 11, hit: 80, crit: 0, dmgType: 'Phys' },
+
+      { id: 'iron_axe', name: 'Iron Axe', type: 'Axe', mt: 8, wt: 10, hit: 75, crit: 0, dmgType: 'Phys' },
+      { id: 'steel_axe', name: 'Steel Axe', type: 'Axe', mt: 11, wt: 15, hit: 65, crit: 0, dmgType: 'Phys' },
+      { id: 'silver_axe', name: 'Silver Axe', type: 'Axe', mt: 15, wt: 12, hit: 70, crit: 0, dmgType: 'Phys' },
+      { id: 'killer_axe', name: 'Killer Axe', type: 'Axe', mt: 11, wt: 11, hit: 65, crit: 30, dmgType: 'Phys' },
+      { id: 'hammer', name: 'Hammer', type: 'Axe', mt: 10, wt: 15, hit: 55, crit: 0, dmgType: 'Phys' },
+      { id: 'garm', name: 'Garm', type: 'Axe', mt: 20, wt: 13, hit: 75, crit: 0, dmgType: 'Phys' },
+
+      { id: 'fire', name: 'Fire', type: 'Magic', mt: 5, wt: 4, hit: 90, crit: 0, dmgType: 'Mag' },
+      { id: 'elfire', name: 'Elfire', type: 'Magic', mt: 10, wt: 10, hit: 85, crit: 0, dmgType: 'Mag' },
+      { id: 'thunder', name: 'Thunder', type: 'Magic', mt: 8, wt: 6, hit: 80, crit: 5, dmgType: 'Mag' },
+      { id: 'lightning', name: 'Lightning', type: 'Magic', mt: 4, wt: 5, hit: 95, crit: 0, dmgType: 'Mag' },
+      { id: 'flux', name: 'Flux', type: 'Magic', mt: 7, wt: 8, hit: 80, crit: 0, dmgType: 'Mag' }
+    ];
+
+    // --- MATH & SYSTEM CONSTANTS ---
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const SUPPORT_VALUES = {
+      none: { mt: 0, hit: 0, crit: 0, avoid: 0 },
+      C:    { mt: 0, hit: 5, crit: 5, avoid: 5 },
+      B:    { mt: 0, hit: 10, crit: 10, avoid: 10 },
+      A:    { mt: 0, hit: 15, crit: 15, avoid: 15 }
+    };
+
+    const RANK_VALUES = {
+      E: { hit: 0, crit: 0 },
+      D: { hit: 0, crit: 0 },
+      C: { hit: 0, crit: 0 },
+      B: { hit: 2, crit: 0 },
+      A: { hit: 3, crit: 3 },
+      S: { hit: 5, crit: 5 }
+    };
+
+    const getTri = (t1, t2) => {
+      if (
+        (t1 === 'Sword' && t2 === 'Axe') ||
+        (t1 === 'Axe' && t2 === 'Lance') ||
+        (t1 === 'Lance' && t2 === 'Sword')
+      ) {
+        return { mt: 1, hit: 15 };
+      }
+
+      if (
+        (t1 === 'Axe' && t2 === 'Sword') ||
+        (t1 === 'Lance' && t2 === 'Axe') ||
+        (t1 === 'Sword' && t2 === 'Lance')
+      ) {
+        return { mt: -1, hit: -15 };
+      }
+
+      return { mt: 0, hit: 0 };
+    };
+
+    function getFC(a, b) {
+      const atkWeapon = a.wpn ?? a.weapon;
+      const defWeapon = b.wpn ?? b.weapon;
+
+      const supportAtk = SUPPORT_VALUES[a.support ?? 'none'] ?? SUPPORT_VALUES.none;
+      const supportDef = SUPPORT_VALUES[b.support ?? 'none'] ?? SUPPORT_VALUES.none;
+
+      const rankAtk = RANK_VALUES[a.rank ?? 'E'] ?? RANK_VALUES.E;
+      const tri = getTri(atkWeapon.type, defWeapon.type);
+
+      const baseMt = a.effective ? atkWeapon.mt * 3 : atkWeapon.mt;
+      const effectiveAtk = a.pow + baseMt + tri.mt + supportAtk.mt;
+
+      const defenseStat = (atkWeapon.dmgType === 'Mag' ? b.res : b.def) + (b.terrain === 'Fort' ? 2 : 0);
+
+      const atkSpeed = a.spd - Math.max(0, atkWeapon.wt - a.con);
+      const defSpeed = b.spd - Math.max(0, defWeapon.wt - b.con);
+
+      const rawHit =
+        atkWeapon.hit +
+        a.skl * 2 +
+        Math.floor(a.lck / 2) +
+        tri.hit +
+        supportAtk.hit +
+        rankAtk.hit;
+
+      const terrainAvoid =
+        (b.terrain === 'Forest' || b.terrain === 'Fort' ? 20 : 0) +
+        supportDef.avoid;
+
+      const avoid = defSpeed * 2 + b.lck + terrainAvoid;
+
+      const critChance =
+        atkWeapon.crit +
+        Math.floor(a.skl / 2) +
+        supportAtk.crit +
+        (a.critClass ? 15 : 0) +
+        rankAtk.crit -
+        b.lck -
+        supportDef.crit;
+
+      return {
+        as: atkSpeed,
+        dmg: Math.max(0, effectiveAtk - defenseStat),
+        hit: clamp(rawHit - avoid, 0, 100),
+        crit: clamp(critChance, 0, 100),
+        dbl: false
+      };
+    }
+
+    function runSim(u1, u2, mode = 'Classic', use2RN = true) {
+      const log = [];
+      let hp1 = u1.hp;
+      let hp2 = u2.hp;
+      let round = 1;
+
+      const f1 = getFC(u1, u2);
+      const f2 = getFC(u2, u1);
+
+      f1.dbl = (f1.as - f2.as >= 4);
+      f2.dbl = (f2.as - f1.as >= 4);
+
+      log.push(`[START] ${u1.name} (${hp1} HP) vs ${u2.name} (${hp2} HP)`);
+
+      const roll = (threshold) => {
+        let r = Math.random() * 100;
+        if (use2RN) r = (r + Math.random() * 100) / 2;
+        return r < threshold;
+      };
+
+      const strike = (attacker, combat, defender, defenderName, label = 'attacks') => {
+        if (defender.hp <= 0) return true;
+
+        log.push(`• ${attack
